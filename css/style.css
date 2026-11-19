@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #fdf6f9;
   --bg-grad: linear-gradient(160deg, #ffe4ee 0%, #e6f7ec 50%, #e3f0fc 100%);
   --surface: #ffffff;
@@ -27,47 +28,6 @@
   --c-off-bg: #f3eff3;   --c-off-fg: #857d8a;
   --radius: 14px;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #1b1822;
-    --bg-grad: linear-gradient(160deg, #2a1d27 0%, #1a2621 50%, #1b2230 100%);
-    --surface: #24202c; --surface-2: #2d2836; --border: #3b3445;
-    --text: #f1ecf3; --muted: #b0a8b8; --primary: #ffa6c9;
-    --btn-bg: #f39bbf; --btn-text: #2a0f1d;
-    --header-grad: linear-gradient(90deg, #3a2431 0%, #223328 50%, #22304a 100%);
-    --bar-1: #8fc4f2; --bar-2: #f7a8c6;
-    --danger: #ff8aa0; --ok: #8de0ad; --miss: #f5b37a;
-    --c-vocab-bg: #1f3a2b; --c-vocab-fg: #a3ecc0;
-    --c-gram-bg: #322845;  --c-gram-fg: #d3c0fa;
-    --c-listen-bg: #1e3250; --c-listen-fg: #a9d0ff;
-    --c-read-bg: #173a38;  --c-read-fg: #9de6de;
-    --c-write-bg: #44301f; --c-write-fg: #ffc9a3;
-    --c-speak-bg: #47253a; --c-speak-fg: #ffb3d1;
-    --c-test-bg: #47262a;  --c-test-fg: #ffadb0;
-    --c-review-bg: #3e3517; --c-review-fg: #f5dc8c;
-    --c-off-bg: #2a2630;   --c-off-fg: #8f8799;
-  }
-}
-:root[data-theme="dark"] {
-    --bg: #1b1822;
-    --bg-grad: linear-gradient(160deg, #2a1d27 0%, #1a2621 50%, #1b2230 100%);
-    --surface: #24202c; --surface-2: #2d2836; --border: #3b3445;
-    --text: #f1ecf3; --muted: #b0a8b8; --primary: #ffa6c9;
-    --btn-bg: #f39bbf; --btn-text: #2a0f1d;
-    --header-grad: linear-gradient(90deg, #3a2431 0%, #223328 50%, #22304a 100%);
-    --bar-1: #8fc4f2; --bar-2: #f7a8c6;
-    --danger: #ff8aa0; --ok: #8de0ad; --miss: #f5b37a;
-    --c-vocab-bg: #1f3a2b; --c-vocab-fg: #a3ecc0;
-    --c-gram-bg: #322845;  --c-gram-fg: #d3c0fa;
-    --c-listen-bg: #1e3250; --c-listen-fg: #a9d0ff;
-    --c-read-bg: #173a38;  --c-read-fg: #9de6de;
-    --c-write-bg: #44301f; --c-write-fg: #ffc9a3;
-    --c-speak-bg: #47253a; --c-speak-fg: #ffb3d1;
-    --c-test-bg: #47262a;  --c-test-fg: #ffadb0;
-    --c-review-bg: #3e3517; --c-review-fg: #f5dc8c;
-    --c-off-bg: #2a2630;   --c-off-fg: #8f8799;
-}
-
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
