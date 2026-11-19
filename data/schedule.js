@@ -125,7 +125,8 @@ window.SCHEDULE = {
     "app": "Pencil Test",
     "desc": "Luyện Nghe & Nói: nghe chép rồi nói đuổi theo câu vừa nghe.",
     "link": "https://penciltest.ai/practice/listen-speak",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói: luyện nghe chép rồi nói đuổi theo câu"
    },
    {
     "start": "21:00",
@@ -137,7 +138,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "Shadowing trong mục Dictation & Shadowing, tự ghi âm và nghe lại.",
     "link": "https://venglish.org/chep-chinh-ta/?bo=ielts-intermediate",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói: luyện shadowing, cho mình 1 đoạn ngắn để đọc theo"
    },
    {
     "start": "22:00",
@@ -317,7 +319,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "IELTS Writing Task 2: chọn 1 đề, viết trong 40 phút.",
     "link": "https://venglish.org/ielts/",
-    "claude": true
+    "claude": true,
+    "prompt": "Viết IELTS Task 2, cho mình 1 đề"
    },
    {
     "start": "10:00",
@@ -363,7 +366,8 @@ window.SCHEDULE = {
     "app": "Pencil Test",
     "desc": "TOEIC Writing: làm bài viết, đọc điểm tham khảo và góp ý của AI.",
     "link": "https://penciltest.ai/exam/speaking-writing",
-    "claude": true
+    "claude": true,
+    "prompt": "Viết TOEIC Writing"
    },
    {
     "start": "15:00",
@@ -419,7 +423,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "IELTS Writing Task 1: viết mô tả trong 20 phút, 30 phút còn lại tự sửa lỗi.",
     "link": "https://venglish.org/ielts/",
-    "claude": true
+    "claude": true,
+    "prompt": "Viết IELTS Task 1, cho mình 1 đề"
    },
    {
     "start": "22:00",
@@ -457,7 +462,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "IELTS Speaking: chọn 1 đề, trả lời Part 1 và Part 2, ghi âm lại.",
     "link": "https://venglish.org/ielts/",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói IELTS Part 1 và Part 2"
    },
    {
     "start": "10:00",
@@ -469,7 +475,8 @@ window.SCHEDULE = {
     "app": "Pencil Test",
     "desc": "TOEIC Speaking: làm 11 câu, đọc điểm tham khảo và góp ý của AI.",
     "link": "https://penciltest.ai/exam/speaking-writing",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói TOEIC Speaking"
    },
    {
     "start": "11:00",
@@ -549,7 +556,8 @@ window.SCHEDULE = {
     "app": "Pencil Test",
     "desc": "Luyện Nghe & Nói: nghe chép rồi nói đuổi.",
     "link": "https://penciltest.ai/practice/listen-speak",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói: luyện nghe chép rồi nói đuổi theo câu"
    },
    {
     "start": "21:00",
@@ -561,7 +569,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "Shadowing, so giọng mình với bản gốc ở từng câu.",
     "link": "https://venglish.org/chep-chinh-ta/?bo=ielts-intermediate",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói: luyện shadowing, cho mình 1 đoạn ngắn để đọc theo"
    },
    {
     "start": "22:00",
@@ -753,7 +762,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "Thi thật 4 kỹ năng: làm phần Writing, Task 1 rồi Task 2, tổng 60 phút.",
     "link": "https://venglish.org/luyen-tap/ielts/thi-that/",
-    "claude": true
+    "claude": true,
+    "prompt": "Thi thử IELTS Writing Task 1 và Task 2, cho mình đề"
    },
    {
     "start": "11:00",
@@ -775,7 +785,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "Làm phần Speaking (khoảng 15 phút), ghi âm và nghe lại, xong trước 13:30 để đi dạy.",
     "link": "https://venglish.org/luyen-tap/ielts/thi-that/",
-    "claude": true
+    "claude": true,
+    "prompt": "Thi thử IELTS Speaking đủ 3 Part"
    },
    {
     "start": "14:00",
@@ -889,7 +900,8 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "Đọc lại bài Writing và nghe lại bản ghi âm Speaking trong tuần.",
     "link": "https://venglish.org/ielts/",
-    "claude": true
+    "claude": true,
+    "prompt": "Ôn lỗi Writing và Speaking trong tuần của mình"
    },
    {
     "start": "11:00",
@@ -975,7 +987,8 @@ window.SCHEDULE = {
     "app": "Pencil Test",
     "desc": "Luyện Nghe & Nói: nghe chép rồi nói đuổi.",
     "link": "https://penciltest.ai/practice/listen-speak",
-    "claude": true
+    "claude": true,
+    "prompt": "Nói: luyện nghe chép rồi nói đuổi theo câu"
    },
    {
     "start": "22:00",

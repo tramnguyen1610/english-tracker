@@ -124,6 +124,22 @@ for (const day of days) for (const s of day) {
     (s.skill === 'Thi thử' && /phần writing|phần speaking/.test(d)) ||
     (s.skill === 'Ôn lỗi' && /writing|speaking/.test(d));
   s.claude = speakWrite && s.app !== 'ForumFlashStudy';
+  if (s.claude) s.prompt = promptFor(s, d);
+}
+
+// Câu mở đầu copy sẵn khi bấm "Học với Claude"
+function promptFor(s, d) {
+  if (s.skill === 'Thi thử' && d.includes('phần writing')) return 'Thi thử IELTS Writing Task 1 và Task 2, cho mình đề';
+  if (s.skill === 'Thi thử' && d.includes('phần speaking')) return 'Thi thử IELTS Speaking đủ 3 Part';
+  if (s.skill === 'Ôn lỗi') return 'Ôn lỗi Writing và Speaking trong tuần của mình';
+  if (d.includes('toeic writing')) return 'Viết TOEIC Writing';
+  if (d.includes('toeic speaking')) return 'Nói TOEIC Speaking';
+  if (d.includes('task 2')) return 'Viết IELTS Task 2, cho mình 1 đề';
+  if (d.includes('task 1')) return 'Viết IELTS Task 1, cho mình 1 đề';
+  if (d.includes('ielts speaking')) return 'Nói IELTS Part 1 và Part 2';
+  if (d.includes('shadowing')) return 'Nói: luyện shadowing, cho mình 1 đoạn ngắn để đọc theo';
+  if (d.includes('nói đuổi')) return 'Nói: luyện nghe chép rồi nói đuổi theo câu';
+  return s.skill + ' ' + (s.app || '');
 }
 
 const out = '// Tự sinh từ CSV bằng tools/build-schedule.js. Chỉ số ngày: 0 = Thứ 2 ... 6 = Chủ nhật.\n' +

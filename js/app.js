@@ -14,20 +14,25 @@
     'Thi thử': 'var(--c-test-fg)', 'Ôn lỗi': 'var(--c-review-fg)'
   };
   const KEY = 'englishTracker.v1';
-  // Claude Project dùng cho mọi khung Nói, Viết
-  const CLAUDE_URL = 'https://claude.ai/project/01a1f4b7-4063-77c3-8fd1-8cc2fe99800f';
-  const POS = ['danh từ', 'động từ', 'tính từ', 'trạng từ', 'giới từ', 'liên từ', 'cụm từ', 'thành ngữ', 'cụm động từ'];
+  // Link Claude Project mặc định (sửa được trong Cài đặt)
+  const DEFAULT_CLAUDE_URL = 'https://claude.ai/project/01a1f4b7-4063-77c3-8fd1-8cc2fe99800f';
 
   // ---------- Lưu trữ ----------
   function emptyState() {
-    return { version: 1, logs: [], vocab: [], settings: { sheetUrl: '', ieltsTarget: '', toeicTarget: '', examDate: '' } };
+    return {
+      version: 1, logs: [], vocab: [], scores: [],
+      settings: { claudeUrl: DEFAULT_CLAUDE_URL, sheetUrl: '', ieltsTarget: '', toeicTarget: '', examDate: '' }
+    };
   }
   function normalize(d) {
+    const settings = Object.assign(emptyState().settings, d.settings || {});
+    if (!settings.claudeUrl) settings.claudeUrl = DEFAULT_CLAUDE_URL;
     return {
       version: 1,
       logs: Array.isArray(d.logs) ? d.logs : [],
       vocab: Array.isArray(d.vocab) ? d.vocab : [],
-      settings: Object.assign(emptyState().settings, d.settings || {})
+      scores: Array.isArray(d.scores) ? d.scores : [],
+      settings
     };
   }
   function load() {
@@ -96,12 +101,16 @@
     const log = findLog(date, slot.start);
     let html = '';
     if (slot.claude) {
-      html += `<a class="btn primary" href="${CLAUDE_URL}" target="_blank" rel="noopener">Học với Claude</a>`;
+      html += `<button class="btn primary" data-act="claude" data-prompt="${esc(slot.prompt || '')}" title="Copy câu mở đầu: ${esc(slot.prompt || '')}">Học với Claude</button>`;
       if (link) html += `<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">Lấy đề</a>`;
     } else if (link) {
       html += `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener">${esc(appButtonText(slot))}</a>`;
     } else if (slot.link === '@sheet') {
       html += `<a class="btn" href="#settings">Nhập link Google Sheet</a>`;
+    }
+    if (slot.start === '22:00' && slot.skill === 'Từ vựng') {
+      const n = dueWords().length;
+      html += `<button class="btn ${n ? 'primary' : ''}" data-act="vreview">Ôn sổ từ${n ? ` (${n} từ đến hạn)` : ': đã xong'}</button>`;
     }
     html += `<button class="btn ${log ? 'done' : ''}" data-act="log" data-date="${date}" data-start="${slot.start}">${log ? '✓ Sửa ghi chép' : 'Ghi đã học'}</button>`;
     return html;
@@ -121,6 +130,8 @@
       cd.innerHTML = diff > 0 ? `còn <b>${diff}</b> ngày` : diff === 0 ? '<b>Hôm nay</b> thi' : `đã thi <b>${-diff}</b> ngày`;
       cd.title = 'Ngày thi ' + dmy(s.examDate);
     } else cd.hidden = true;
+    const due = dueWords().length;
+    $('#tabs a[data-page="vocab"]').innerHTML = 'Từ vựng' + (due ? ` <span class="badge" title="${due} từ đến hạn ôn">${due}</span>` : '');
   }
 
   // ---------- Trang Hôm nay ----------
@@ -345,12 +356,13 @@
         ${v.ipa ? `<span class="v-ipa">${esc(v.ipa)}</span>` : ''}
         ${v.pos ? `<span class="chip sk-vocab">${esc(v.pos)}</span>` : ''}
         ${v.learned ? '<span class="chip sk-listen">✓ Đã thuộc</span>' : ''}
+        ${speakButtons(v.word)}
       </div>
       <div class="v-meaning">${multi(v.meaning)}</div>
       ${v.usage ? `<div class="v-block"><div class="v-label">Cách dùng</div><div>${multi(v.usage)}</div></div>` : ''}
       ${v.example ? `<div class="v-block"><div class="v-label">Ví dụ</div><div class="v-ex">${multi(v.example)}</div></div>` : ''}
       <div class="v-foot">
-        <span class="muted small">${v.createdAt ? dmy(v.createdAt.slice(0, 10)) : ''}${v.source ? ' · ' + esc(v.source) : ''}</span>
+        <span class="muted small">${v.createdAt ? dmy(v.createdAt.slice(0, 10)) : ''}${v.source ? ' · ' + esc(v.source) : ''}${v.learned ? '' : ' · ôn ' + (wordDue(v) <= todayYmd() ? '<b>hôm nay</b>' : dmy(wordDue(v)))}</span>
         <span class="spacer"></span>
         <button class="btn sm ghost" data-act="vlearn" data-id="${esc(v.id)}">${v.learned ? 'Học lại' : 'Đã thuộc'}</button>
         <button class="btn sm" data-act="vedit" data-id="${esc(v.id)}">Sửa</button>
@@ -370,9 +382,20 @@
     const learned = state.vocab.filter(v => v.learned).length;
     const [a, b] = weekRange(mondayOf(now()));
     const thisWeek = state.vocab.filter(v => v.createdAt && v.createdAt.slice(0, 10) >= a && v.createdAt.slice(0, 10) <= b).length;
+    const due = dueWords().length;
+    const seg = `<div class="seg" role="tablist">
+        <button role="tab" class="${vocabMode === 'list' ? 'on' : ''}" data-act="vmode" data-mode="list">Sổ từ</button>
+        <button role="tab" class="${vocabMode === 'review' ? 'on' : ''}" data-act="vmode" data-mode="review">Ôn tập${due ? ` <span class="badge">${due}</span>` : ''}</button>
+      </div>`;
+    if (vocabMode === 'review') {
+      $('#page-vocab').innerHTML = `<div class="toolbar">${seg}<span class="spacer"></span>
+        <span class="muted small">${due} từ đến hạn hôm nay</span></div><div id="reviewBox"></div>`;
+      renderReview();
+      return;
+    }
     $('#page-vocab').innerHTML = `
       <div class="toolbar">
-        <h2 class="title" style="margin:0">Sổ từ vựng</h2>
+        ${seg}<span class="spacer"></span>
         <button class="btn primary" data-act="vadd">+ Thêm từ</button>
       </div>
       <div class="kpis kpis-3">
@@ -441,6 +464,203 @@
     save(); closeVocab(); render(); toast('Đã xóa');
   });
 
+  // ---------- Copy + mở Claude ----------
+  // Copy đồng bộ (giữ được thao tác bấm của người dùng để mở tab mới ngay sau đó)
+  function copySync(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    let ok = false; try { ok = document.execCommand('copy'); } catch (_) { }
+    ta.remove(); return ok;
+  }
+  function openClaude(prompt) {
+    const url = state.settings.claudeUrl;
+    if (!url) { toast('Hãy nhập link Claude Project trong Cài đặt'); location.hash = '#settings'; return; }
+    let copied = prompt ? copySync(prompt) : false;
+    if (prompt && !copied && navigator.clipboard) navigator.clipboard.writeText(prompt).catch(() => { });
+    const w = window.open(url, '_blank', 'noopener');
+    if (prompt) toast(copied || navigator.clipboard ? 'Đã copy, dán vào Claude: “' + prompt + '”' : 'Không copy được. Câu mở đầu: ' + prompt);
+    if (!w && !prompt) location.href = url;
+  }
+
+  // ---------- Tóm tắt từ Claude & Điểm số ----------
+  // Dạng: "Ngày | Kỹ năng | Điểm ước lượng | 3 lỗi chính"
+  function parseSummary(text, fallbackDate) {
+    const line = String(text || '').split(/\r?\n/).map(l => l.trim()).find(l => l.split('|').length >= 3);
+    if (!line) return null;
+    const parts = line.split('|').map(x => x.trim());
+    const [rawDate, skill, score] = parts;
+    const errors = parts.slice(3).join(' | ').trim();
+    let date = fallbackDate;
+    let m;
+    if ((m = rawDate.match(/(\d{4})-(\d{1,2})-(\d{1,2})/))) date = `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+    else if ((m = rawDate.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/))) {
+      let y = m[3] ? +m[3] : +fallbackDate.slice(0, 4); if (y < 100) y += 2000;
+      date = `${y}-${pad(+m[2])}-${pad(+m[1])}`;
+    }
+    const num = parseFloat((score.match(/\d+(?:[.,]\d+)?/) || [''])[0].replace(',', '.'));
+    if (!skill && !score) return null;
+    return { date, skill, score, value: isNaN(num) ? null : num, errors };
+  }
+
+  function scoreGroup(sc) {
+    const t = fold(sc.skill + ' ' + (sc.slotSkill || ''));
+    const exam = /toeic/.test(t) ? 'TOEIC' : 'IELTS';
+    const kind = /speak|noi/.test(t) ? 'Speaking' : /writ|viet/.test(t) ? 'Writing' : /listen|nghe/.test(t) ? 'Listening' : /read|doc/.test(t) ? 'Reading' : 'Khác';
+    return exam + ' ' + kind;
+  }
+
+  function sparkline(values) {
+    const W = 200, H = 44, p = 4;
+    if (values.length < 2) return '';
+    const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+    const pts = values.map((v, i) => [p + i * (W - 2 * p) / (values.length - 1), H - p - (v - min) / span * (H - 2 * p)]);
+    return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${pts.map(x => x.join(',')).join(' ')}"/>${pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6"/>`).join('')}</svg>`;
+  }
+
+  function renderScores() {
+    const list = state.scores.slice().sort((a, b) => (b.date + (b.createdAt || '')).localeCompare(a.date + (a.createdAt || '')));
+    const groups = {};
+    list.slice().reverse().forEach(sc => { const g = scoreGroup(sc); (groups[g] = groups[g] || []).push(sc); });
+    const cards = Object.keys(groups).sort().map(g => {
+      const items = groups[g]; const vals = items.map(x => x.value).filter(v => v != null);
+      const last = items[items.length - 1];
+      const recent = vals.slice(-5);
+      const avg = recent.length ? Math.round(recent.reduce((a, b) => a + b, 0) / recent.length * 10) / 10 : null;
+      return `<div class="kpi"><div class="k-label">${esc(g)}</div>
+        <div class="k-val">${esc(last.score)}</div>
+        <div class="k-sub">Lần gần nhất ${dmy(last.date)}${avg != null && recent.length > 1 ? ` · TB ${recent.length} lần: ${avg}` : ''}</div>
+        ${sparkline(vals.slice(-10))}</div>`;
+    }).join('');
+    const rows = list.map(sc => `<tr>
+      <td class="nw">${dmy(sc.date)}</td><td>${esc(sc.skill)}</td><td class="nw"><b>${esc(sc.score)}</b></td>
+      <td>${esc(sc.errors)}</td>
+      <td><button class="btn sm ghost danger" data-act="sdel" data-id="${esc(sc.id)}" aria-label="Xóa">Xóa</button></td></tr>`).join('');
+    $('#page-scores').innerHTML = `
+      <div class="toolbar"><h2 class="title" style="margin:0">Điểm số</h2></div>
+      <p class="muted small" style="margin:0 0 12px">Điểm được thêm khi bạn dán tóm tắt từ Claude vào hộp “Ghi đã học”.</p>
+      ${cards ? `<div class="kpis">${cards}</div>` : ''}
+      <div class="card table-wrap" style="padding:8px">
+        ${list.length ? `<table class="log"><thead><tr><th>Ngày</th><th>Kỹ năng</th><th>Điểm</th><th>Lỗi chính</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<div class="empty">Chưa có điểm nào. Sau buổi học với Claude, bấm “Ghi đã học” và dán dòng tóm tắt dạng: Ngày | Kỹ năng | Điểm ước lượng | 3 lỗi chính.</div>'}
+      </div>`;
+  }
+
+  // ---------- Ôn tập từ vựng (SM-2 đơn giản) ----------
+  const todayYmd = () => ymd(now());
+  const wordDue = v => (v.srs && v.srs.due) || (v.createdAt ? v.createdAt.slice(0, 10) : todayYmd());
+  function dueWords() { const t = todayYmd(); return state.vocab.filter(v => !v.learned && wordDue(v) <= t); }
+
+  // q: 1 = Quên, 3 = Khó, 5 = Nhớ
+  function schedule(v, q) {
+    const s = Object.assign({ ef: 2.5, interval: 0, reps: 0 }, v.srs || {});
+    if (q < 3) { s.reps = 0; s.interval = 0; }
+    else {
+      if (s.reps === 0) s.interval = 1;
+      else if (s.reps === 1) s.interval = q === 3 ? 3 : 6;
+      else s.interval = Math.max(s.interval + 1, Math.round(s.interval * (q === 3 ? 1.2 : s.ef)));
+      s.reps += 1;
+    }
+    s.ef = Math.max(1.3, Math.round((s.ef + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)) * 100) / 100);
+    s.due = ymd(addDays(parseYmd(todayYmd()), s.interval));
+    s.last = todayYmd();
+    return s;
+  }
+  const intervalLabel = n => n === 0 ? 'ôn lại ngay' : n === 1 ? '1 ngày' : n < 30 ? n + ' ngày' : Math.round(n / 30) + ' tháng';
+
+  // Che từ trong câu ví dụ
+  function maskExample(example, word) {
+    let out = esc(example);
+    const reEsc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const full = new RegExp(reEsc(esc(word)), 'gi');
+    if (full.test(out)) return out.replace(full, m => '<span class="blank">' + '_'.repeat(Math.min(12, m.length)) + '</span>');
+    word.split(/\s+/).filter(t => t.length >= 3).forEach(t => {
+      out = out.replace(new RegExp('\\b' + reEsc(esc(t)) + '\\w*', 'gi'), '<span class="blank">_____</span>');
+    });
+    return out;
+  }
+
+  // Phát âm
+  const canSpeak = 'speechSynthesis' in window;
+  function speak(text, lang) {
+    if (!canSpeak || !text) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    const voices = speechSynthesis.getVoices();
+    const v = voices.find(x => x.lang === lang) || voices.find(x => x.lang.replace('_', '-').startsWith(lang));
+    if (v) u.voice = v;
+    u.rate = 0.9;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  }
+  if (canSpeak) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
+  function speakButtons(word) {
+    if (!canSpeak) return '';
+    return `<span class="speak">
+      <button type="button" class="btn sm ghost" data-act="speak" data-lang="en-US" data-text="${esc(word)}" aria-label="Phát âm Mỹ">🔊 US</button>
+      <button type="button" class="btn sm ghost" data-act="speak" data-lang="en-GB" data-text="${esc(word)}" aria-label="Phát âm Anh">🔊 UK</button></span>`;
+  }
+
+  let vocabMode = 'list';
+  let review = null; // { queue: [ids], done: n, total: n, flipped: bool }
+  function startReview() {
+    const ids = dueWords().sort((a, b) => wordDue(a).localeCompare(wordDue(b))).map(v => v.id);
+    review = { queue: ids, done: 0, total: ids.length, flipped: false };
+  }
+  function renderReview() {
+    const box = $('#reviewBox'); if (!box) return;
+    if (!review) startReview();
+    const id = review.queue[0];
+    const v = state.vocab.find(x => x.id === id);
+    if (!v) {
+      const more = dueWords().length;
+      box.innerHTML = `<div class="card empty">
+        <div style="font-size:2rem">🎉</div>
+        <p><b>${review.total ? `Xong ${review.total} từ đến hạn hôm nay!` : 'Hôm nay không có từ nào đến hạn ôn.'}</b></p>
+        <p class="muted small">${state.vocab.length ? 'Thêm từ mới ở “Sổ từ” để có thẻ ôn ngày mai.' : 'Hãy thêm từ vào Sổ từ trước.'}</p>
+        ${more ? `<button class="btn primary" data-act="vrestart">Ôn tiếp ${more} từ</button>` : ''}
+      </div>`;
+      return;
+    }
+    const preview = q => intervalLabel(schedule(v, q).interval);
+    box.innerHTML = `
+      <div class="review-progress"><span>Thẻ ${review.done + 1} / ${review.total}</span>
+        <div class="bar"><span style="width:${review.total ? review.done / review.total * 100 : 0}%;background:var(--bar-1)"></span></div></div>
+      <div class="flash ${review.flipped ? 'flipped' : ''}" data-act="vflip" role="button" tabindex="0" aria-label="Lật thẻ">
+        <div class="flash-front">
+          <div class="v-head" style="justify-content:center"><span class="v-word" style="font-size:1.8rem">${esc(v.word)}</span>
+            ${v.ipa ? `<span class="v-ipa">${esc(v.ipa)}</span>` : ''}${v.pos ? `<span class="chip sk-vocab">${esc(v.pos)}</span>` : ''}</div>
+          ${speakButtons(v.word)}
+          ${v.example ? `<div class="v-block v-ex" style="text-align:left">${maskExample(v.example, v.word).replace(/\n/g, '<br>')}</div>` : ''}
+          ${review.flipped ? '' : '<p class="muted small">Nghĩ nghĩa và cách dùng, rồi bấm để lật thẻ</p>'}
+        </div>
+        ${review.flipped ? `<div class="flash-back">
+          <div class="v-meaning" style="font-size:1.1rem;font-weight:600">${esc(v.meaning).replace(/\n/g, '<br>')}</div>
+          ${v.usage ? `<div class="v-block"><div class="v-label">Cách dùng</div><div>${esc(v.usage).replace(/\n/g, '<br>')}</div></div>` : ''}
+          ${v.example ? `<div class="v-block"><div class="v-label">Ví dụ</div><div class="v-ex">${esc(v.example).replace(/\n/g, '<br>')}</div></div>` : ''}
+        </div>` : ''}
+      </div>
+      <div class="grade">
+        ${review.flipped ? `
+          <button class="btn g-again" data-act="grade" data-q="1">Quên<small>${preview(1)}</small></button>
+          <button class="btn g-hard" data-act="grade" data-q="3">Khó<small>${preview(3)}</small></button>
+          <button class="btn g-good" data-act="grade" data-q="5">Nhớ<small>${preview(5)}</small></button>`
+        : `<button class="btn primary" data-act="vflip" style="grid-column:1/-1">Lật thẻ</button>`}
+      </div>`;
+  }
+  function grade(q) {
+    const id = review.queue.shift();
+    const v = state.vocab.find(x => x.id === id);
+    if (v) {
+      v.srs = schedule(v, q);
+      if (q < 3) review.queue.push(id); // quên thì ôn lại trong lượt này
+      else review.done += 1;
+      save();
+    }
+    review.flipped = false;
+    renderReview(); renderHeader();
+  }
+
   // ---------- Trang Cài đặt ----------
   function renderSettings() {
     const s = state.settings;
@@ -448,6 +668,8 @@
       <form class="card" id="settingsForm">
         <h2>Liên kết</h2>
         <div class="form-grid">
+          <label>Link Claude Project <span class="hint">— mở khi bấm “Học với Claude” ở khung Nói, Viết</span>
+            <input name="claudeUrl" type="url" placeholder="https://claude.ai/project/..." value="${esc(s.claudeUrl)}"></label>
           <label>Link Google Sheet <span class="hint">— file Lịch học có sheet Nhật ký học</span>
             <input name="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/..." value="${esc(s.sheetUrl)}"></label>
         </div>
@@ -467,7 +689,7 @@
           <label class="btn" for="importJson" style="font-size:inherit">Nhập file JSON</label>
           <input id="importJson" type="file" accept="application/json,.json" hidden>
         </div>
-        <p class="muted small">Đang có ${state.logs.length} buổi đã ghi và ${state.vocab.length} từ trong sổ từ vựng.</p>
+        <p class="muted small">Đang có ${state.logs.length} buổi đã ghi ${state.vocab.length} từ trong sổ từ vựng và ${state.scores.length} điểm số.</p>
       </div>`;
   }
 
@@ -486,11 +708,29 @@
     f.minutes.value = existing ? existing.minutes : STUDY_MIN;
     f.result.value = existing ? existing.result : '';
     f.note.value = existing ? existing.note : '';
+    f.summary.value = existing ? (existing.summary || '') : '';
+    $('#summaryPreview').textContent = '';
+    if (f.summary.value) previewSummary(false);
     $('#logDelete').hidden = !existing;
     const dlg = $('#logDialog');
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
     f.minutes.focus(); f.minutes.select();
   }
+  // Đọc ô "Dán tóm tắt từ Claude" và tự điền Kết quả, Ghi chú
+  function previewSummary(fill = true) {
+    const f = $('#logForm');
+    const p = parseSummary(f.summary.value, editing.date);
+    const box = $('#summaryPreview');
+    if (!f.summary.value.trim()) { box.textContent = ''; box.className = 'hint'; return; }
+    if (!p) { box.textContent = 'Chưa đúng dạng: Ngày | Kỹ năng | Điểm ước lượng | 3 lỗi chính'; box.className = 'hint warn'; return; }
+    if (fill) {
+      f.result.value = p.score;
+      f.note.value = p.errors ? 'Lỗi chính: ' + p.errors : f.note.value;
+    }
+    box.textContent = `✓ Sẽ lưu điểm ${p.score || '?'} (${p.skill || editing.slot.skill}, ${dmy(p.date)}) vào trang Điểm số`;
+    box.className = 'hint ok';
+  }
+
   function closeLog() { const dlg = $('#logDialog'); if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); editing = null; }
 
   $('#logForm').addEventListener('submit', e => {
@@ -504,17 +744,29 @@
       id: existing ? existing.id : Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       date, start: slot.start, slot: slotLabel(slot), app: slot.app, skill: slot.skill,
       content: f.content.value.trim(), minutes, result: f.result.value.trim(), note: f.note.value.trim(),
+      summary: f.summary.value.trim(),
       updatedAt: new Date().toISOString()
     };
     state.logs = state.logs.filter(l => !(l.date === date && l.start === slot.start));
     state.logs.push(entry);
-    save(); closeLog(); render(); toast('Đã lưu buổi học');
+    // Điểm từ tóm tắt của Claude: mỗi buổi học giữ 1 điểm
+    state.scores = state.scores.filter(x => x.logId !== entry.id);
+    const p = parseSummary(entry.summary, date);
+    if (p) {
+      state.scores.push({
+        id: 's' + Date.now().toString(36), logId: entry.id, date: p.date, skill: p.skill || slot.skill,
+        score: p.score, value: p.value, errors: p.errors, slotSkill: slot.skill, app: slot.app,
+        createdAt: new Date().toISOString()
+      });
+    }
+    save(); closeLog(); render(); toast(p ? 'Đã lưu buổi học và điểm số' : 'Đã lưu buổi học');
   });
   $('#logCancel').addEventListener('click', closeLog);
   $('#logDelete').addEventListener('click', () => {
     if (!editing || !editing.existing) return;
     if (!confirm('Xóa buổi đã ghi này?')) return;
     state.logs = state.logs.filter(l => l.id !== editing.existing.id);
+    state.scores = state.scores.filter(x => x.logId !== editing.existing.id);
     save(); closeLog(); render(); toast('Đã xóa');
   });
 
@@ -523,6 +775,22 @@
     const t = e.target.closest('[data-act],[data-week],[data-prog],#exportJson');
     if (!t) return;
     if (t.dataset.act === 'log') { openLog(t.dataset.date, t.dataset.start); return; }
+    if (t.dataset.act === 'claude') { openClaude(t.dataset.prompt); return; }
+    if (t.dataset.act === 'speak') { speak(t.dataset.text, t.dataset.lang); return; }
+    if (t.dataset.act === 'vreview' || t.dataset.act === 'vrestart') {
+      vocabMode = 'review'; review = null;
+      if (location.hash !== '#vocab') { location.hash = '#vocab'; window.scrollTo(0, 0); }
+      render();
+      return;
+    }
+    if (t.dataset.act === 'vmode') { vocabMode = t.dataset.mode; if (vocabMode === 'review') review = null; renderVocab(); return; }
+    if (t.dataset.act === 'vflip') { if (review && !review.flipped) { review.flipped = true; renderReview(); } return; }
+    if (t.dataset.act === 'grade') { grade(Number(t.dataset.q)); return; }
+    if (t.dataset.act === 'sdel') {
+      if (!confirm('Xóa điểm này?')) return;
+      state.scores = state.scores.filter(x => x.id !== t.dataset.id); save(); renderScores(); toast('Đã xóa');
+      return;
+    }
     if (t.dataset.act === 'vadd') { openVocab(null); return; }
     if (t.dataset.act === 'vedit') { openVocab(t.dataset.id); return; }
     if (t.dataset.act === 'vlearn') {
@@ -542,7 +810,16 @@
     }
   });
 
+  // Phím tắt khi ôn tập: Space/Enter lật thẻ, 1 Quên, 2 Khó, 3 Nhớ
+  document.addEventListener('keydown', e => {
+    if (currentPage() !== 'vocab' || vocabMode !== 'review' || !review || document.querySelector('dialog[open]')) return;
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (!review.flipped && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); review.flipped = true; renderReview(); }
+    else if (review.flipped && ['1', '2', '3'].includes(e.key) && review.queue.length) grade({ 1: 1, 2: 3, 3: 5 }[e.key]);
+  });
+
   document.addEventListener('input', e => {
+    if (e.target.name === 'summary' && editing) previewSummary();
     if (e.target.id === 'vSearch') { vocabQuery = e.target.value; renderVocabList(); }
   });
 
@@ -571,12 +848,12 @@
     if (e.target.id !== 'settingsForm') return;
     e.preventDefault();
     const f = e.target;
-    ['sheetUrl', 'ieltsTarget', 'toeicTarget', 'examDate'].forEach(k => { state.settings[k] = f[k].value.trim(); });
+    ['claudeUrl', 'sheetUrl', 'ieltsTarget', 'toeicTarget', 'examDate'].forEach(k => { state.settings[k] = f[k].value.trim(); });
     save(); renderHeader(); toast('Đã lưu cài đặt');
   });
 
   // ---------- Điều hướng ----------
-  const PAGES = { today: renderToday, week: renderWeek, progress: renderProgress, vocab: renderVocab, settings: renderSettings };
+  const PAGES = { today: renderToday, week: renderWeek, progress: renderProgress, vocab: renderVocab, scores: renderScores, settings: renderSettings };
   function currentPage() { const h = location.hash.slice(1); return PAGES[h] ? h : 'today'; }
   function render() {
     const p = currentPage();

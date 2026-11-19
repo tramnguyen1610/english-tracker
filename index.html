@@ -6,7 +6,7 @@
 <title>Tự học tiếng Anh</title>
 <meta name="theme-color" content="#ffd3e2">
 <meta name="color-scheme" content="light">
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
 <header class="topbar">
@@ -22,6 +22,7 @@
   <a href="#week" data-page="week">Tuần</a>
   <a href="#progress" data-page="progress">Tiến độ</a>
   <a href="#vocab" data-page="vocab">Từ vựng</a>
+  <a href="#scores" data-page="scores">Điểm số</a>
   <a href="#settings" data-page="settings">Cài đặt</a>
 </nav>
 
@@ -30,6 +31,7 @@
   <section id="page-week" class="page"></section>
   <section id="page-progress" class="page"></section>
   <section id="page-vocab" class="page"></section>
+  <section id="page-scores" class="page"></section>
   <section id="page-settings" class="page"></section>
 </main>
 
@@ -48,6 +50,10 @@
         <input name="result" type="text" placeholder="vd 32/40, band 6.0">
       </label>
     </div>
+    <label>Dán tóm tắt từ Claude <span class="hint">— dạng: Ngày | Kỹ năng | Điểm ước lượng | 3 lỗi chính</span>
+      <textarea name="summary" rows="2" placeholder="20/11 | IELTS Writing Task 2 | 6.0 | mạo từ; thì quá khứ; câu quá dài"></textarea>
+      <span id="summaryPreview" class="hint"></span>
+    </label>
     <label>Ghi chú
       <textarea name="note" rows="2" placeholder="Lỗi hay gặp, từ mới…"></textarea>
     </label>
@@ -112,7 +118,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="data/schedule.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="data/schedule.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
