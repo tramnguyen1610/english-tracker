@@ -1,0 +1,10 @@
+# Cấu hình cục bộ của Claude Code
+.claude/
+
+# File hệ thống
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# File sao lưu dữ liệu xuất từ web (chứa nhật ký học cá nhân)
+tu-hoc-tieng-anh-*.json
