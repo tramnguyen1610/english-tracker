@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tự học tiếng Anh</title>
 <meta name="theme-color" content="#ffd3e2">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 <header class="topbar">
@@ -20,7 +20,7 @@
   <a href="#today" data-page="today">Hôm nay</a>
   <a href="#week" data-page="week">Tuần</a>
   <a href="#progress" data-page="progress">Tiến độ</a>
-  <a href="#journal" data-page="journal">Nhật ký</a>
+  <a href="#vocab" data-page="vocab">Từ vựng</a>
   <a href="#settings" data-page="settings">Cài đặt</a>
 </nav>
 
@@ -28,7 +28,7 @@
   <section id="page-today" class="page"></section>
   <section id="page-week" class="page"></section>
   <section id="page-progress" class="page"></section>
-  <section id="page-journal" class="page"></section>
+  <section id="page-vocab" class="page"></section>
   <section id="page-settings" class="page"></section>
 </main>
 
@@ -59,9 +59,59 @@
   </form>
 </dialog>
 
+<dialog id="vocabDialog">
+  <form id="vocabForm" method="dialog">
+    <h2 id="vocabTitle">Thêm từ mới</h2>
+    <div class="row2" style="grid-template-columns:1.6fr 1fr">
+      <label>Từ / cụm từ
+        <input name="word" type="text" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="vd take into account">
+      </label>
+      <label>Phiên âm
+        <input name="ipa" type="text" autocomplete="off" placeholder="/ˈæk.aʊnt/">
+      </label>
+    </div>
+    <label>Loại từ
+      <select name="pos" style="width:100%;margin-top:4px">
+          <option value="">Chưa chọn</option>
+          <option>danh từ</option>
+          <option>động từ</option>
+          <option>tính từ</option>
+          <option>trạng từ</option>
+          <option>giới từ</option>
+          <option>liên từ</option>
+          <option>cụm từ</option>
+          <option>cụm động từ</option>
+          <option>thành ngữ</option>
+      </select>
+    </label>
+    <label>Nghĩa
+      <textarea name="meaning" rows="2" required placeholder="Nghĩa tiếng Việt"></textarea>
+    </label>
+    <label>Cách dùng <span class="hint">— cấu trúc, giới từ đi kèm, collocation, lưu ý</span>
+      <textarea name="usage" rows="3" placeholder="vd take sth into account = tính đến cái gì; thường dùng trong văn viết trang trọng"></textarea>
+    </label>
+    <label>Ví dụ <span class="hint">— mỗi câu một dòng</span>
+      <textarea name="example" rows="3" placeholder="vd We must take the cost into account."></textarea>
+    </label>
+    <label>Gặp ở đâu
+      <input name="source" type="text" list="vocabSources" placeholder="vd Venglish, đề Reading Cam 18">
+      <datalist id="vocabSources">
+        <option value="AIO English"><option value="Venglish"><option value="Pencil Test"><option value="OpenTOEIC"><option value="ForumFlashStudy"><option value="Claude">
+      </datalist>
+    </label>
+    <label class="check"><input name="learned" type="checkbox"> Đã thuộc</label>
+    <div class="dlg-actions">
+      <button type="button" id="vocabDelete" class="btn danger" hidden>Xóa</button>
+      <span class="spacer"></span>
+      <button type="button" id="vocabCancel" class="btn ghost">Hủy</button>
+      <button type="submit" class="btn primary">Lưu</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<script src="data/schedule.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
+<script src="data/schedule.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>

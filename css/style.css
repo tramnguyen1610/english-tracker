@@ -213,13 +213,23 @@ button.cell:hover { filter: brightness(.96); }
 .chart .val { fill: var(--text); font-weight: 600; }
 .chart line { stroke: var(--border); }
 
-/* Nhật ký */
-.table-wrap { overflow-x: auto; }
-table.log { width: 100%; border-collapse: collapse; font-size: .88rem; min-width: 720px; }
-table.log th, table.log td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-table.log th { font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
-table.log td.nw { white-space: nowrap; }
-table.log td.n { text-align: right; font-variant-numeric: tabular-nums; }
+/* Sổ từ vựng */
+.kpis.kpis-3 { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.kpis.kpis-3 .kpi { padding: 10px 12px; }
+.vocab-grid { display: grid; gap: 12px; }
+@media (min-width: 720px) { .vocab-grid { grid-template-columns: 1fr 1fr; } }
+.vcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.vcard.learned { opacity: .8; }
+.v-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.v-word { font-size: 1.25rem; font-weight: 700; }
+.v-ipa { color: var(--muted); font-size: .9rem; }
+.v-meaning { font-size: 1rem; }
+.v-block { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; font-size: .92rem; }
+.v-label { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--primary); margin-bottom: 2px; }
+.v-ex { font-style: italic; }
+.v-foot { display: flex; align-items: center; gap: 6px; margin-top: auto; }
+label.check { display: flex; align-items: center; gap: 8px; }
+label.check input { width: auto; margin: 0; }
 .empty { text-align: center; color: var(--muted); padding: 24px 8px; }
 select, input, textarea {
   font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);

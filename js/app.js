@@ -14,18 +14,26 @@
     'Thi thử': 'var(--c-test-fg)', 'Ôn lỗi': 'var(--c-review-fg)'
   };
   const KEY = 'englishTracker.v1';
+  // Claude Project dùng cho mọi khung Nói, Viết
+  const CLAUDE_URL = 'https://claude.ai/project/01a1f4b7-4063-77c3-8fd1-8cc2fe99800f';
+  const POS = ['danh từ', 'động từ', 'tính từ', 'trạng từ', 'giới từ', 'liên từ', 'cụm từ', 'thành ngữ', 'cụm động từ'];
 
   // ---------- Lưu trữ ----------
   function emptyState() {
-    return { version: 1, logs: [], settings: { claudeUrl: '', sheetUrl: '', ieltsTarget: '', toeicTarget: '', examDate: '' } };
+    return { version: 1, logs: [], vocab: [], settings: { sheetUrl: '', ieltsTarget: '', toeicTarget: '', examDate: '' } };
+  }
+  function normalize(d) {
+    return {
+      version: 1,
+      logs: Array.isArray(d.logs) ? d.logs : [],
+      vocab: Array.isArray(d.vocab) ? d.vocab : [],
+      settings: Object.assign(emptyState().settings, d.settings || {})
+    };
   }
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (!raw) return emptyState();
-      const d = JSON.parse(raw);
-      const base = emptyState();
-      return { version: 1, logs: Array.isArray(d.logs) ? d.logs : [], settings: Object.assign(base.settings, d.settings || {}) };
+      return raw ? normalize(JSON.parse(raw)) : emptyState();
     } catch (e) { return emptyState(); }
   }
   let state = load();
@@ -88,7 +96,7 @@
     const log = findLog(date, slot.start);
     let html = '';
     if (slot.claude) {
-      html += `<button class="btn primary" data-act="claude">Học với Claude</button>`;
+      html += `<a class="btn primary" href="${CLAUDE_URL}" target="_blank" rel="noopener">Học với Claude</a>`;
       if (link) html += `<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">Lấy đề</a>`;
     } else if (link) {
       html += `<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener">${esc(appButtonText(slot))}</a>`;
@@ -310,52 +318,128 @@
         <p class="muted small" style="margin:6px 0 0">Cột nhạt là tuần hiện tại. Kế hoạch mỗi tuần: ${fmtHours(totalPlanned)} giờ.</p></div>`;
   }
 
-  // ---------- Trang Nhật ký ----------
-  let journalRange = 'all';
-  function journalLogs() {
-    let list = state.logs.slice();
-    const n = now();
-    if (journalRange === 'week') { const [a, b] = weekRange(mondayOf(n)); list = list.filter(l => l.date >= a && l.date <= b); }
-    if (journalRange === 'month') { const p = ymd(n).slice(0, 7); list = list.filter(l => l.date.startsWith(p)); }
-    return list.sort((x, y) => (x.date + x.start).localeCompare(y.date + y.start));
+  // ---------- Trang Sổ từ vựng ----------
+  let vocabQuery = '';
+  let vocabFilter = 'all';
+  let vocabSort = 'new';
+  const fold = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+
+  function vocabList() {
+    const q = fold(vocabQuery.trim());
+    let list = state.vocab.filter(v => {
+      if (vocabFilter === 'learning' && v.learned) return false;
+      if (vocabFilter === 'learned' && !v.learned) return false;
+      if (!q) return true;
+      return fold([v.word, v.meaning, v.usage, v.example, v.ipa, v.source].join(' ')).includes(q);
+    });
+    if (vocabSort === 'az') list.sort((x, y) => x.word.localeCompare(y.word, 'en', { sensitivity: 'base' }));
+    else list.sort((x, y) => (y.createdAt || '').localeCompare(x.createdAt || ''));
+    return list;
   }
-  function renderJournal() {
-    const list = journalLogs();
-    const rows = list.slice().reverse().map(l => `<tr>
-      <td class="nw">${dmy(l.date)}</td><td class="nw">${esc(l.slot)}</td><td>${esc(l.app)}</td>
-      <td><span class="chip ${skillClass(l.skill)}">${esc(l.skill)}</span></td>
-      <td>${esc(l.content)}</td><td class="n">${esc(l.minutes)}</td><td>${esc(l.result)}</td><td>${esc(l.note)}</td>
-      <td><button class="btn sm ghost" data-act="log" data-date="${l.date}" data-start="${l.start}">Sửa</button></td></tr>`).join('');
-    const total = list.reduce((t, l) => t + (Number(l.minutes) || 0), 0);
-    $('#page-journal').innerHTML = `
-      <div class="toolbar">
-        <h2 class="title" style="margin:0">Nhật ký học</h2>
-        <select id="jRange" aria-label="Khoảng thời gian">
-          <option value="all">Tất cả</option><option value="week">Tuần này</option><option value="month">Tháng này</option>
-        </select>
-        <button class="btn primary" id="copyTsv">Copy để dán Google Sheet</button>
-        ${state.settings.sheetUrl ? `<a class="btn" href="${esc(state.settings.sheetUrl)}" target="_blank" rel="noopener">Mở Sheet</a>` : ''}
+
+  function vocabCard(v) {
+    const multi = t => esc(t).replace(/\n/g, '<br>');
+    return `<article class="vcard ${v.learned ? 'learned' : ''}">
+      <div class="v-head">
+        <span class="v-word">${esc(v.word)}</span>
+        ${v.ipa ? `<span class="v-ipa">${esc(v.ipa)}</span>` : ''}
+        ${v.pos ? `<span class="chip sk-vocab">${esc(v.pos)}</span>` : ''}
+        ${v.learned ? '<span class="chip sk-listen">✓ Đã thuộc</span>' : ''}
       </div>
-      <p class="muted small" style="margin:0 0 8px">${list.length} buổi · ${fmtHours(total)} giờ. Nút copy lấy đúng 8 cột (Ngày, Khung giờ, App, Kỹ năng, Nội dung đã học, Số phút, Kết quả, Ghi chú), không kèm tiêu đề, xếp từ cũ đến mới. Dán vào ô cột A của dòng trống đầu tiên trong sheet Nhật ký học.</p>
-      <div class="card table-wrap" style="padding:8px">
-        ${list.length ? `<table class="log"><thead><tr><th>Ngày</th><th>Khung giờ</th><th>App</th><th>Kỹ năng</th><th>Nội dung đã học</th><th>Số phút</th><th>Kết quả</th><th>Ghi chú</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-        : '<div class="empty">Chưa có buổi nào. Vào trang Hôm nay hoặc Tuần và bấm “Ghi đã học”.</div>'}
-      </div>`;
-    $('#jRange').value = journalRange;
+      <div class="v-meaning">${multi(v.meaning)}</div>
+      ${v.usage ? `<div class="v-block"><div class="v-label">Cách dùng</div><div>${multi(v.usage)}</div></div>` : ''}
+      ${v.example ? `<div class="v-block"><div class="v-label">Ví dụ</div><div class="v-ex">${multi(v.example)}</div></div>` : ''}
+      <div class="v-foot">
+        <span class="muted small">${v.createdAt ? dmy(v.createdAt.slice(0, 10)) : ''}${v.source ? ' · ' + esc(v.source) : ''}</span>
+        <span class="spacer"></span>
+        <button class="btn sm ghost" data-act="vlearn" data-id="${esc(v.id)}">${v.learned ? 'Học lại' : 'Đã thuộc'}</button>
+        <button class="btn sm" data-act="vedit" data-id="${esc(v.id)}">Sửa</button>
+      </div>
+    </article>`;
   }
-  function toTsv(list) {
-    const clean = v => String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ').trim();
-    return list.map(l => [dmy(l.date), l.slot, l.app, l.skill, l.content, l.minutes, l.result, l.note].map(clean).join('\t')).join('\n');
+
+  function renderVocabList() {
+    const list = vocabList();
+    const box = $('#vocabList'); if (!box) return;
+    box.innerHTML = list.length ? list.map(vocabCard).join('')
+      : `<div class="empty card">${state.vocab.length ? 'Không có từ nào khớp.' : 'Chưa có từ nào. Bấm “+ Thêm từ” để lưu từ mới học được cùng cách dùng.'}</div>`;
   }
-  async function copyText(text) {
-    try { await navigator.clipboard.writeText(text); return true; }
-    catch (e) {
-      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      let ok = false; try { ok = document.execCommand('copy'); } catch (_) { }
-      ta.remove(); return ok;
-    }
+
+  function renderVocab() {
+    const total = state.vocab.length;
+    const learned = state.vocab.filter(v => v.learned).length;
+    const [a, b] = weekRange(mondayOf(now()));
+    const thisWeek = state.vocab.filter(v => v.createdAt && v.createdAt.slice(0, 10) >= a && v.createdAt.slice(0, 10) <= b).length;
+    $('#page-vocab').innerHTML = `
+      <div class="toolbar">
+        <h2 class="title" style="margin:0">Sổ từ vựng</h2>
+        <button class="btn primary" data-act="vadd">+ Thêm từ</button>
+      </div>
+      <div class="kpis kpis-3">
+        <div class="kpi"><div class="k-label">Tổng số từ</div><div class="k-val">${total}</div></div>
+        <div class="kpi"><div class="k-label">Đã thuộc</div><div class="k-val">${learned}</div></div>
+        <div class="kpi"><div class="k-label">Thêm tuần này</div><div class="k-val">${thisWeek}</div></div>
+      </div>
+      <div class="toolbar">
+        <input id="vSearch" type="search" placeholder="Tìm từ, nghĩa, cách dùng…" value="${esc(vocabQuery)}" style="flex:1;min-width:180px">
+        <select id="vFilter" aria-label="Lọc">
+          <option value="all">Tất cả</option><option value="learning">Đang học</option><option value="learned">Đã thuộc</option>
+        </select>
+        <select id="vSort" aria-label="Sắp xếp">
+          <option value="new">Mới nhất</option><option value="az">A → Z</option>
+        </select>
+      </div>
+      <div id="vocabList" class="vocab-grid"></div>`;
+    $('#vFilter').value = vocabFilter;
+    $('#vSort').value = vocabSort;
+    renderVocabList();
   }
+
+  // Hộp thoại thêm / sửa từ
+  let editingWord = null;
+  function openVocab(id) {
+    const v = id ? state.vocab.find(x => x.id === id) : null;
+    editingWord = v;
+    const f = $('#vocabForm');
+    $('#vocabTitle').textContent = v ? 'Sửa từ' : 'Thêm từ mới';
+    f.word.value = v ? v.word : '';
+    f.ipa.value = v ? (v.ipa || '') : '';
+    f.pos.value = v ? (v.pos || '') : '';
+    f.meaning.value = v ? v.meaning : '';
+    f.usage.value = v ? (v.usage || '') : '';
+    f.example.value = v ? (v.example || '') : '';
+    f.source.value = v ? (v.source || '') : '';
+    f.learned.checked = v ? !!v.learned : false;
+    $('#vocabDelete').hidden = !v;
+    const dlg = $('#vocabDialog');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    f.word.focus();
+  }
+  function closeVocab() { const dlg = $('#vocabDialog'); if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); editingWord = null; }
+
+  $('#vocabForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = e.target;
+    const word = f.word.value.trim(); const meaning = f.meaning.value.trim();
+    if (!word || !meaning) { toast('Cần nhập từ và nghĩa'); return; }
+    if (!editingWord && state.vocab.some(v => v.word.toLowerCase() === word.toLowerCase())
+      && !confirm(`“${word}” đã có trong sổ. Vẫn thêm nữa?`)) return;
+    const data = {
+      word, meaning, ipa: f.ipa.value.trim(), pos: f.pos.value, usage: f.usage.value.trim(),
+      example: f.example.value.trim(), source: f.source.value.trim(), learned: f.learned.checked
+    };
+    if (editingWord) Object.assign(editingWord, data, { updatedAt: new Date().toISOString() });
+    else state.vocab.push(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), createdAt: ymd(now()) + 'T' + now().toTimeString().slice(0, 8) }, data));
+    const wasNew = !editingWord;
+    save(); closeVocab(); render(); toast(wasNew ? `Đã lưu “${word}”` : 'Đã cập nhật');
+  });
+  $('#vocabCancel').addEventListener('click', closeVocab);
+  $('#vocabDelete').addEventListener('click', () => {
+    if (!editingWord || !confirm(`Xóa “${editingWord.word}” khỏi sổ?`)) return;
+    const id = editingWord.id;
+    state.vocab = state.vocab.filter(v => v.id !== id);
+    save(); closeVocab(); render(); toast('Đã xóa');
+  });
 
   // ---------- Trang Cài đặt ----------
   function renderSettings() {
@@ -364,8 +448,6 @@
       <form class="card" id="settingsForm">
         <h2>Liên kết</h2>
         <div class="form-grid">
-          <label>Link Claude Project <span class="hint">— mở khi bấm “Học với Claude” ở khung Nói, Viết</span>
-            <input name="claudeUrl" type="url" placeholder="https://claude.ai/project/..." value="${esc(s.claudeUrl)}"></label>
           <label>Link Google Sheet <span class="hint">— file Lịch học có sheet Nhật ký học</span>
             <input name="sheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/..." value="${esc(s.sheetUrl)}"></label>
         </div>
@@ -385,7 +467,7 @@
           <label class="btn" for="importJson" style="font-size:inherit">Nhập file JSON</label>
           <input id="importJson" type="file" accept="application/json,.json" hidden>
         </div>
-        <p class="muted small">Đang có ${state.logs.length} buổi đã ghi.</p>
+        <p class="muted small">Đang có ${state.logs.length} buổi đã ghi và ${state.vocab.length} từ trong sổ từ vựng.</p>
       </div>`;
   }
 
@@ -438,22 +520,18 @@
 
   // ---------- Sự kiện chung ----------
   document.addEventListener('click', async e => {
-    const t = e.target.closest('[data-act],[data-week],[data-prog],#copyTsv,#exportJson');
+    const t = e.target.closest('[data-act],[data-week],[data-prog],#exportJson');
     if (!t) return;
     if (t.dataset.act === 'log') { openLog(t.dataset.date, t.dataset.start); return; }
-    if (t.dataset.act === 'claude') {
-      if (state.settings.claudeUrl) window.open(state.settings.claudeUrl, '_blank', 'noopener');
-      else { toast('Hãy nhập link Claude Project trong Cài đặt'); location.hash = '#settings'; }
+    if (t.dataset.act === 'vadd') { openVocab(null); return; }
+    if (t.dataset.act === 'vedit') { openVocab(t.dataset.id); return; }
+    if (t.dataset.act === 'vlearn') {
+      const v = state.vocab.find(x => x.id === t.dataset.id);
+      if (v) { v.learned = !v.learned; save(); renderVocab(); toast(v.learned ? `Đã thuộc “${v.word}”` : `Học lại “${v.word}”`); }
       return;
     }
     if (t.dataset.week != null) { const v = Number(t.dataset.week); weekOffset = v === 0 ? 0 : weekOffset + v; renderWeek(); return; }
     if (t.dataset.prog != null) { progOffset += Number(t.dataset.prog); renderProgress(); return; }
-    if (t.id === 'copyTsv') {
-      const list = journalLogs();
-      if (!list.length) { toast('Chưa có dữ liệu để copy'); return; }
-      toast(await copyText(toTsv(list)) ? `Đã copy ${list.length} dòng, dán vào Google Sheet` : 'Không copy được');
-      return;
-    }
     if (t.id === 'exportJson') {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -464,17 +542,23 @@
     }
   });
 
+  document.addEventListener('input', e => {
+    if (e.target.id === 'vSearch') { vocabQuery = e.target.value; renderVocabList(); }
+  });
+
   document.addEventListener('change', e => {
-    if (e.target.id === 'jRange') { journalRange = e.target.value; renderJournal(); }
+    if (e.target.id === 'vFilter') { vocabFilter = e.target.value; renderVocabList(); }
+    if (e.target.id === 'vSort') { vocabSort = e.target.value; renderVocabList(); }
     if (e.target.id === 'importJson') {
       const file = e.target.files[0]; if (!file) return;
       const r = new FileReader();
       r.onload = () => {
         try {
           const d = JSON.parse(r.result);
-          if (!d || !Array.isArray(d.logs)) throw new Error('bad');
-          if (!confirm(`File có ${d.logs.length} buổi. Thay toàn bộ dữ liệu hiện tại (${state.logs.length} buổi) bằng file này?`)) return;
-          state = { version: 1, logs: d.logs, settings: Object.assign(emptyState().settings, d.settings || {}) };
+          if (!d || (!Array.isArray(d.logs) && !Array.isArray(d.vocab))) throw new Error('bad');
+          const nd = normalize(d);
+          if (!confirm(`File có ${nd.logs.length} buổi và ${nd.vocab.length} từ. Thay toàn bộ dữ liệu hiện tại (${state.logs.length} buổi, ${state.vocab.length} từ) bằng file này?`)) return;
+          state = nd;
           save(); render(); toast('Đã nhập dữ liệu');
         } catch (err) { toast('File JSON không hợp lệ'); }
       };
@@ -487,12 +571,12 @@
     if (e.target.id !== 'settingsForm') return;
     e.preventDefault();
     const f = e.target;
-    ['claudeUrl', 'sheetUrl', 'ieltsTarget', 'toeicTarget', 'examDate'].forEach(k => { state.settings[k] = f[k].value.trim(); });
+    ['sheetUrl', 'ieltsTarget', 'toeicTarget', 'examDate'].forEach(k => { state.settings[k] = f[k].value.trim(); });
     save(); renderHeader(); toast('Đã lưu cài đặt');
   });
 
   // ---------- Điều hướng ----------
-  const PAGES = { today: renderToday, week: renderWeek, progress: renderProgress, journal: renderJournal, settings: renderSettings };
+  const PAGES = { today: renderToday, week: renderWeek, progress: renderProgress, vocab: renderVocab, settings: renderSettings };
   function currentPage() { const h = location.hash.slice(1); return PAGES[h] ? h : 'today'; }
   function render() {
     const p = currentPage();
@@ -504,7 +588,7 @@
   window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
   // Cập nhật mỗi 30 giây (trừ khi đang mở hộp thoại hoặc đang ở Cài đặt)
   setInterval(() => {
-    if ($('#logDialog').open) return;
+    if ($('#logDialog').open || $('#vocabDialog').open) return;
     const p = currentPage();
     if (p === 'today' || p === 'week') render();
     else renderHeader();
