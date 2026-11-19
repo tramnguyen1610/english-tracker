@@ -329,7 +329,7 @@ window.SCHEDULE = {
     "app": "ForumFlashStudy",
     "desc": "Dán bài vào Chấm IELTS Writing Task 2, đọc điểm 4 tiêu chí, viết lại đoạn yếu nhất.",
     "link": "https://www.forumflashstudy.com/cong-cu/cham-writing-task-2",
-    "claude": true
+    "claude": false
    },
    {
     "start": "11:00",
@@ -827,7 +827,7 @@ window.SCHEDULE = {
     "app": "ForumFlashStudy",
     "desc": "Sửa bài Task 2 vừa thi, rồi nộp chấm lại ở Chấm IELTS Writing Task 2.",
     "link": "https://www.forumflashstudy.com/cong-cu/cham-writing-task-2",
-    "claude": true
+    "claude": false
    },
    {
     "start": "21:00",
@@ -889,7 +889,7 @@ window.SCHEDULE = {
     "app": "Venglish",
     "desc": "Đọc lại bài Writing và nghe lại bản ghi âm Speaking trong tuần.",
     "link": "https://venglish.org/ielts/",
-    "claude": false
+    "claude": true
    },
    {
     "start": "11:00",

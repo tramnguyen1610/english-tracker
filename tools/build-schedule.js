@@ -118,8 +118,12 @@ for (const day of days) for (const s of day) {
   if (s.type !== 'study') continue;
   s.link = linkFor(s.app, s.skill, s.desc, '');
   const d = s.desc.toLowerCase();
-  s.claude = s.skill === 'Nói' || s.skill === 'Viết' ||
-    (s.skill === 'Thi thử' && (/phần writing|phần speaking/.test(d)));
+  // Mọi khung liên quan tới Nói và Viết đều học với Claude,
+  // trừ khung Viết trên ForumFlashStudy (dùng công cụ chấm bài của web đó).
+  const speakWrite = s.skill === 'Nói' || s.skill === 'Viết' ||
+    (s.skill === 'Thi thử' && /phần writing|phần speaking/.test(d)) ||
+    (s.skill === 'Ôn lỗi' && /writing|speaking/.test(d));
+  s.claude = speakWrite && s.app !== 'ForumFlashStudy';
 }
 
 const out = '// Tự sinh từ CSV bằng tools/build-schedule.js. Chỉ số ngày: 0 = Thứ 2 ... 6 = Chủ nhật.\n' +
